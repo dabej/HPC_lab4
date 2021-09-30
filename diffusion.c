@@ -24,6 +24,7 @@ int main (int argc, char *argv[]) {
 	}
 
 	// Parse init file with input values
+	//FILE *fp = fopen("home/hpc2021/diffusion_opencl/test_data/init_100_100", "r");
 	FILE *fp = fopen("init", "r");
 	const int width, height;
 	fscanf(fp, "%d %d", &width, &height);
@@ -199,7 +200,6 @@ int main (int argc, char *argv[]) {
 		fprintf(stderr, "cannot finish queue\n");
 		return 1;
 	}
-
 	// average temp	
 	float sum = 0;
 	for (size_t jx=0; jx<height; ++jx) {
@@ -226,7 +226,6 @@ int main (int argc, char *argv[]) {
 	}
 	avg_temp = sum/(width*height);
 	printf("average temp of abs differences from avg is %.2f\n",avg_temp);
-
 
 	free(a);
 	free(c);
