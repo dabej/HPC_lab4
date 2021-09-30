@@ -24,7 +24,7 @@ int main (int argc, char *argv[]) {
 	
 	// Parse init file with input values
 	//FILE *fp = fopen("init", "r");
-	FILE *fp = fopen("init_100000_100", "r");
+	FILE *fp = fopen("init_100_100", "r");
 	const int width, height;
 	fscanf(fp, "%d %d", &width, &height);
 
@@ -196,34 +196,23 @@ int main (int argc, char *argv[]) {
 		return 1;
 	}
 
-/*
+
 	// average temp	
-	float sum = 0;
-	for (size_t jx=0; jx<height; ++jx) {
-		for (size_t ix=0; ix<width; ++ix) {
-			printf(" %5.f ", c[jx*width+ ix]);
+	float sum = 0.;
+	for (size_t jx=0; jx<height; ++jx)
+		for (size_t ix=0; ix<width; ++ix)
 			sum +=  c[jx*width+ ix];
-		}
-		printf("\n");
-	}
 	float avg_temp = sum/(height*width);
-	printf("avg temp is %.2f\n",avg_temp);
+	printf("average: %E\n", avg_temp);
 
 
 	// the absolute difference of each temperature and the average
 	sum = 0.;
-	float val;
-	for (size_t jx=0; jx<height; ++jx) {
-		for (size_t ix=0; ix<width; ++ix) {
-			val = fabs(c[jx*width+ ix] - avg_temp);
-			sum += val;
-			printf(" %5.f ", val);
-		}
-		printf("\n");
-	}
+	for (size_t jx=0; jx<height; ++jx)
+		for (size_t ix=0; ix<width; ++ix)
+			sum += fabs(c[jx*width+ ix] - avg_temp);
 	avg_temp = sum/(width*height);
-	printf("average temp of abs differences from avg is %.2f\n",avg_temp);
-*/
+	printf("average absolute difference: %E\n", avg_temp);
 
 	free(a);
 	free(c);
