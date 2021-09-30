@@ -3,12 +3,41 @@
 #include <string.h>
 #define CL_TARGET_OPENCL_VERSION 300
 #include <CL/cl.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-int
-main()
-{
-	
-	int n = 3;
+int main (int argc, char *argv[]) {
+    int opt, n;
+	float d;
+    while ((opt = getopt(argc, argv, "n:d:")) != -1) {
+		switch (opt) {
+			case 'n':
+			n = atoi(optarg);
+			break;
+			case 'd':
+			d = atof(optarg);
+			break;
+		}
+    }
+
+	FILE *fp = fopen("init", "r");
+	const int width, height;
+	fscanf(fp, "%d %d", &width, &height);
+
+	float *a = (float*) malloc(sizeof(float)*width*height);
+	for (size_t i = 0; i < width*height; i++)
+		a[i] = 0.;
+
+	float **matrix = (float**) malloc(sizeof(float*)*height);
+	for (size_t i = 0, j = 0; i < height; i++, j += width)
+		matrix[i] = a + j;
+
+	int row, col;
+	float temp;
+	while (fscanf(fp, "%d %d %f", &row, &col, &temp) == 3)
+		matrix[row][col] = temp;
+
+	free(matrix);
 
   cl_int error;
 
@@ -101,10 +130,6 @@ main()
     return 1;
   }
 
-  const int width = 3;
-  const int height= 3;
-	float d = 1./30.;
-
   cl_mem input_buffer_a, output_buffer_c;
   input_buffer_a = clCreateBuffer(context, CL_MEM_READ_WRITE,
                        width*height* sizeof(float), NULL, &error);
@@ -118,13 +143,6 @@ main()
     fprintf(stderr, "cannot create buffer c\n");
     return 1;
   }
-
-  float *a = malloc(width*height* sizeof(float));
-
-// init a for testing  
-	float a_stack[] = {0,0,0,0,1000000,0,0,0,0}; 
-	for (int i = 0; i< width*height; i++)
-		a[i] = a_stack[i];	
 
   if ( clEnqueueWriteBuffer(command_queue,
            input_buffer_a, CL_TRUE, 0,width*height* sizeof(float), a, 0, NULL, NULL)

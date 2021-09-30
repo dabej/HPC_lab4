@@ -33,7 +33,7 @@ diffusion(
 	if (j != width-1)
 		right = a[i * width + (j+1)];
 
-	printf("i,j are %d,%d --- up,down,left and right are %f,%f,%f,%f\n",i,j,up,down,left,right);
+	//printf("i,j are %d,%d --- up,down,left and right are %f,%f,%f,%f\n",i,j,up,down,left,right);
 	value += d * ((up+down+left+right)/4. - value);
 	c[i * width + j] = value;
 } 
