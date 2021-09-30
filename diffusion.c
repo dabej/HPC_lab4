@@ -103,17 +103,11 @@ main()
 	float d = 1./30.;
 	int n = 2;
 
-  cl_mem input_buffer_a, input_buffer_b, output_buffer_c;
+  cl_mem input_buffer_a, output_buffer_c;
   input_buffer_a = clCreateBuffer(context, CL_MEM_READ_WRITE,
                        width*height* sizeof(float), NULL, &error);
   if ( error != CL_SUCCESS ) {
     fprintf(stderr, "cannot create buffer a\n");
-    return 1;
-  }
-  input_buffer_b = clCreateBuffer(context, CL_MEM_READ_ONLY,
-                       width*height* sizeof(float), NULL, &error);
-  if ( error != CL_SUCCESS ) {
-    fprintf(stderr, "cannot create buffer b\n");
     return 1;
   }
   output_buffer_c = clCreateBuffer(context, CL_MEM_READ_WRITE,
@@ -124,7 +118,6 @@ main()
   }
 
   float *a = malloc(width*height* sizeof(float));
-  float *b = malloc(width*height* sizeof(float));
 
 // init a for testing  
 	float a_stack[] = {0,0,0,0,1000000,0,0,0,0}; 
@@ -137,13 +130,6 @@ main()
     fprintf(stderr, "cannot enqueue write of buffer a\n");
     return 1;
   }
-  if ( clEnqueueWriteBuffer(command_queue,
-           input_buffer_b, CL_TRUE, 0,width*height* sizeof(float), b, 0, NULL, NULL)
-       != CL_SUCCESS ) {
-    fprintf(stderr, "cannot enqueue write of buffer b\n");
-    return 1;
-  }
-
 
 	cl_mem *ptrInput = &input_buffer_a;
 	cl_mem *ptrOutput = &output_buffer_c;
@@ -151,11 +137,10 @@ main()
 	for (int it = 0; it < n; it++) {
   
   clSetKernelArg(kernel, 0, sizeof(cl_mem), ptrInput);
-  clSetKernelArg(kernel, 1, sizeof(cl_mem), &input_buffer_b);
-  clSetKernelArg(kernel, 2, sizeof(cl_mem), ptrOutput);
-  clSetKernelArg(kernel, 3, sizeof(int), &width);
-  clSetKernelArg(kernel, 4, sizeof(int), &height);
-  clSetKernelArg(kernel, 5, sizeof(float), &d);
+  clSetKernelArg(kernel, 1, sizeof(cl_mem), ptrOutput);
+  clSetKernelArg(kernel, 2, sizeof(int), &width);
+  clSetKernelArg(kernel, 3, sizeof(int), &height);
+  clSetKernelArg(kernel, 4, sizeof(float), &d);
   
 	const size_t global_sz[] = {width,height};
   if ( clEnqueueNDRangeKernel(command_queue, kernel,
@@ -184,20 +169,23 @@ main()
     return 1;
   }
 
-
+// average temp	
+	float sum = 0;
   for (size_t jx=0; jx<height; ++jx) {
-    for (size_t ix=0; ix<width; ++ix)
-      printf(" %5.f ", c[jx*width+ ix]);
+    for (size_t ix=0; ix<width; ++ix) {
+		printf(" %5.f ", c[jx*width+ ix]);
+		sum +=  c[jx*width+ ix];
+	}
     printf("\n");
   }
+	float avg_temp = sum/(height*width);
+	printf("avg temp is %f\n",avg_temp);
   
 
   free(a);
-  free(b);
   free(c);
 
   clReleaseMemObject(input_buffer_a);
-  clReleaseMemObject(input_buffer_b);
   clReleaseMemObject(output_buffer_c);
 
   clReleaseProgram(program);
