@@ -4,11 +4,11 @@ diffusion(
 	__global const float *a,
 	__global float *c,
 	int width,
-	int height
+	int height,
+	float d
 	)
 {
 
-	float d = 1./30.;
 	int i = get_global_id(0);
 	int j = get_global_id(1);
 
