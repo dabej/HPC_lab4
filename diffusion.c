@@ -3,36 +3,12 @@
 #include <string.h>
 #define CL_TARGET_OPENCL_VERSION 300
 #include <CL/cl.h>
-#include <unistd.h>
-
-float c = 0;
-const char *opencl_program_src = \
-  "__kernel void dot_prod_mul(__global const float * a, __global const float * b, __global float * c)\n" \
-  "{\n" \
-  "  int ix = get_global_id(0);\n" \
-  "  c[ix] = a[ix] * b[ix];\n" \
-  "}\n";
-
 
 int
-main(int argc, char *argv[])
+main()
 {
-	// Argparse
-	int opt,n;
-	float d;
-    while ((opt = getopt(argc, argv, "t:l:")) != -1) {
-		switch (opt) {
-			case 'n':
-				n = atoi(optarg);
-				break;
-			case 'd':
-				c = atof(optarg);
-				break;
-		}
-    }
-	
   cl_int error;
-	// init platform
+
   cl_platform_id platform_id;
   cl_uint nmb_platforms;
   if ( clGetPlatformIDs(1, &platform_id, &nmb_platforms) != CL_SUCCESS ) {
@@ -40,14 +16,13 @@ main(int argc, char *argv[])
     return 1;
   }
 
-	// init device
   cl_device_id device_id;
   cl_uint nmb_devices;
   if ( clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, &nmb_devices) != CL_SUCCESS ) {
     fprintf(stderr, "cannot get device\n" );
     return 1;
   }
-	// init context
+
   cl_context context;
   cl_context_properties properties[] =
   {
@@ -60,7 +35,7 @@ main(int argc, char *argv[])
     fprintf(stderr, "cannot create context\n");
     return 1;
   }
-	// init command queue
+
   cl_command_queue command_queue;
   command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &error);
   if ( error != CL_SUCCESS ) {
@@ -68,10 +43,9 @@ main(int argc, char *argv[])
     return 1;
   }
 
-  /*
   char *opencl_program_src;
   {
-    FILE *clfp = fopen("./dotprod.cl", "r");
+    FILE *clfp = fopen("./diffusion.cl", "r");
     if ( clfp == NULL ) {
       fprintf(stderr, "could not load cl source code\n");
       return 1;
@@ -84,7 +58,6 @@ main(int argc, char *argv[])
     opencl_program_src[clfsz] = 0;
     fclose(clfp);
   }
-  */
 
   cl_program program;
   size_t src_len = strlen(opencl_program_src);
@@ -95,7 +68,7 @@ main(int argc, char *argv[])
     return 1;
   }
 
-  // free(opencl_program_src);
+  free(opencl_program_src);
   
   error = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
   if ( error != CL_SUCCESS ) {
@@ -119,79 +92,104 @@ main(int argc, char *argv[])
     return 1;
   }
   
-  cl_kernel kernel = clCreateKernel(program, "dot_prod_mul", &error);
+  cl_kernel kernel = clCreateKernel(program, "diffusion", &error);
   if ( error != CL_SUCCESS ) {
     fprintf(stderr, "cannot create kernel\n");
     return 1;
   }
 
-  const int sz = 10000000;
+  const int width = 3;
+  const int height= 3;
+	float d = 1./30.;
+	int n = 2;
+
   cl_mem input_buffer_a, input_buffer_b, output_buffer_c;
-  input_buffer_a = clCreateBuffer(context, CL_MEM_READ_ONLY, sz*sizeof(float), NULL, &error);
+  input_buffer_a = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                       width*height* sizeof(float), NULL, &error);
   if ( error != CL_SUCCESS ) {
     fprintf(stderr, "cannot create buffer a\n");
     return 1;
   }
-  input_buffer_b = clCreateBuffer(context, CL_MEM_READ_ONLY, sz*sizeof(float), NULL, &error);
+  input_buffer_b = clCreateBuffer(context, CL_MEM_READ_ONLY,
+                       width*height* sizeof(float), NULL, &error);
   if ( error != CL_SUCCESS ) {
     fprintf(stderr, "cannot create buffer b\n");
     return 1;
   }
-  output_buffer_c = clCreateBuffer(context, CL_MEM_READ_ONLY, sz*sizeof(float), NULL, &error);
+  output_buffer_c = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                        width*height* sizeof(float), NULL, &error);
   if ( error != CL_SUCCESS ) {
     fprintf(stderr, "cannot create buffer c\n");
     return 1;
   }
 
-  float *a = malloc(sz*sizeof(float));
-  float *b = malloc(sz*sizeof(float));
-  for ( int ix = 0; ix < sz; ++ix ) {
-    a[ix] = ix;
-    b[ix] = ix;
-  }
+  float *a = malloc(width*height* sizeof(float));
+  float *b = malloc(width*height* sizeof(float));
+
+// init a for testing  
+	float a_stack[] = {0,0,0,0,1000000,0,0,0,0}; 
+	for (int i = 0; i< width*height; i++)
+		a[i] = a_stack[i];	
+
   if ( clEnqueueWriteBuffer(command_queue,
-           input_buffer_a, CL_TRUE, 0, sz*sizeof(float), a, 0, NULL, NULL)
+           input_buffer_a, CL_TRUE, 0,width*height* sizeof(float), a, 0, NULL, NULL)
        != CL_SUCCESS ) {
     fprintf(stderr, "cannot enqueue write of buffer a\n");
     return 1;
   }
   if ( clEnqueueWriteBuffer(command_queue,
-           input_buffer_b, CL_TRUE, 0, sz*sizeof(float), b, 0, NULL, NULL)
+           input_buffer_b, CL_TRUE, 0,width*height* sizeof(float), b, 0, NULL, NULL)
        != CL_SUCCESS ) {
     fprintf(stderr, "cannot enqueue write of buffer b\n");
     return 1;
   }
-  clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer_a);
-  clSetKernelArg(kernel, 1, sizeof(cl_mem), &input_buffer_b);
-  clSetKernelArg(kernel, 2, sizeof(cl_mem), &output_buffer_c);
+
+
+	cl_mem *ptrInput = &input_buffer_a;
+	cl_mem *ptrOutput = &output_buffer_c;
+
+	for (int it = 0; it < n; it++) {
   
-  const size_t global_sz = (size_t) sz;
+  clSetKernelArg(kernel, 0, sizeof(cl_mem), ptrInput);
+  clSetKernelArg(kernel, 1, sizeof(cl_mem), &input_buffer_b);
+  clSetKernelArg(kernel, 2, sizeof(cl_mem), ptrOutput);
+  clSetKernelArg(kernel, 3, sizeof(int), &width);
+  clSetKernelArg(kernel, 4, sizeof(int), &height);
+  clSetKernelArg(kernel, 5, sizeof(float), &d);
+  
+	const size_t global_sz[] = {width,height};
   if ( clEnqueueNDRangeKernel(command_queue, kernel,
-           1, NULL, (const size_t*) &global_sz, NULL, 0, NULL, NULL)
+           2, NULL, (const size_t *) &global_sz, NULL, 0, NULL, NULL)
        != CL_SUCCESS ) {
     fprintf(stderr, "cannot enqueue kernel\n");
     return 1;
   }
-  
-  float *c = malloc(sz*sizeof(float));
+		// swapping buffers
+		cl_mem *ptrTemp = ptrInput;
+		ptrInput = ptrOutput;
+		ptrOutput = ptrTemp;
+  }
+
+  float *c = malloc(width*height* sizeof(float));
   if ( clEnqueueReadBuffer(command_queue,
-           output_buffer_c, CL_TRUE, 0, sz*sizeof(float), c, 0, NULL, NULL)
+           *ptrInput, CL_TRUE, 0,width*height* sizeof(float), c, 0, NULL, NULL)
        != CL_SUCCESS ) {
     fprintf(stderr, "cannot enqueue read of buffer c\n");
     return 1;
   }
 
-  if ( clFinish(command_queue) != CL_SUCCESS ) {
+  
+	if ( clFinish(command_queue) != CL_SUCCESS ) {
     fprintf(stderr, "cannot finish queue\n");
     return 1;
   }
 
 
-  double c_sum = 0;
-  for (size_t ix = 0; ix < sz; ++ix)
-    c_sum += c[ix];
-  
-  printf("Dot product equals %f\n", c_sum);
+  for (size_t jx=0; jx<height; ++jx) {
+    for (size_t ix=0; ix<width; ++ix)
+      printf(" %5.f ", c[jx*width+ ix]);
+    printf("\n");
+  }
   
 
   free(a);
