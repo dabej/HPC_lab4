@@ -41,6 +41,16 @@ int main (int argc, char *argv[]) {
 	float temp;
 	while (fscanf(fp, "%d %d %f", &row, &col, &temp) == 3)
 		matrix[row][col] = temp;
+	
+
+
+	for (size_t jx=0; jx<height; ++jx) {
+		for (size_t ix=0; ix<width; ++ix) {
+			printf(" %5.f ", a[jx*width+ ix]);
+		}
+		printf("\n");
+	}
+
 	free(matrix);
 
 	// Boilerplate opencl begin
@@ -172,7 +182,7 @@ int main (int argc, char *argv[]) {
 		clSetKernelArg(kernel, 3, sizeof(int), &height);
 		clSetKernelArg(kernel, 4, sizeof(float), &d);
 
-		const size_t global_sz[] = {width,height};
+		const size_t global_sz[] = {height,width};
 		if ( clEnqueueNDRangeKernel(command_queue, kernel,
 					2, NULL, (const size_t *) &global_sz, NULL, 0, NULL, NULL)
 				!= CL_SUCCESS ) {
@@ -212,7 +222,7 @@ int main (int argc, char *argv[]) {
 	float avg_temp = sum/(height*width);
 	printf("avg temp is %.2f\n",avg_temp);
 
-
+/*
 	// the absolute difference of each temperature and the average
 	sum = 0.;
 	float val;
@@ -226,6 +236,7 @@ int main (int argc, char *argv[]) {
 	}
 	avg_temp = sum/(width*height);
 	printf("average temp of abs differences from avg is %.2f\n",avg_temp);
+*/
 
 	free(a);
 	free(c);

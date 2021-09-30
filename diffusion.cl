@@ -14,7 +14,7 @@ diffusion(
 
 	float value = a[i * width + j];
 	
-	float up, down, left, right = 0;
+	float up, down, left, right = 0.;
 
 
 	if (i == 0)
