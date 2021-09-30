@@ -7,6 +7,9 @@
 int
 main()
 {
+	
+	int n = 3;
+
   cl_int error;
 
   cl_platform_id platform_id;
@@ -101,7 +104,6 @@ main()
   const int width = 3;
   const int height= 3;
 	float d = 1./30.;
-	int n = 2;
 
   cl_mem input_buffer_a, output_buffer_c;
   input_buffer_a = clCreateBuffer(context, CL_MEM_READ_WRITE,
